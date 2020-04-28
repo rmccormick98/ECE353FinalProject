@@ -1,4 +1,4 @@
-// Copyright (c) 2015-19, Joe Krachey
+// Copyright (c) 2015-18, Joe Krachey
 // All rights reserved.
 //
 // Redistribution and use in source or binary form, with or without modification, 
@@ -19,33 +19,29 @@
 // WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
 // EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#ifndef __HW2_IMAGES_H__
+#define __HW2_IMAGES_H__
 
-#include "project_hardware_init.h"
+#include <stdint.h>
 
-bool init_hardware(void){
-	
-	init_serial_debug(true, false);
-	lcd_config_gpio();
-  lcd_config_screen();
-	ft6x06_init();
-  lcd_clear_screen(LCD_COLOR_BLACK);
-  ps2_initialize();
+/* Bitmap info for space_ship */
+extern const uint8_t space_shipBitmaps[];
+extern const uint8_t space_shipWidthPixels;
+extern const uint8_t space_shipHeightPixels;
 
-	if(!io_expander_init()){
-					return false;
-	 }
-	io_expander_write_reg(MCP23017_GPIOA_R, 0xFF);
-	configure_buttons();
-	// configure timers
-	 gp_timer_config_32(TIMER1_BASE,TIMER_TAMR_TAMR_PERIOD, 50000000, false, true);
-	gp_timer_config_32(TIMER2_BASE,TIMER_TAMR_TAMR_PERIOD, 1000000, false, true);
-	gp_timer_config_32(TIMER3_BASE,TIMER_TAMR_TAMR_PERIOD, 500000, false, true);
-  gp_timer_config_32(TIMER4_BASE,TIMER_TAMR_TAMR_PERIOD, 50000, false, true);	
-	 // enable leds on launch pad
-	 lp_io_init();
-	 
-	 
-	return true;
-	 
-}
+// Bitmap info for invader
+extern const uint8_t invaderBitmaps[];
+extern const uint8_t invaderWidthPixels;
+extern const uint8_t invaderHeightPixels;
 
+// Bitmap info for trump2
+extern const uint8_t trump2Bitmaps[];
+extern const uint8_t trump2WidthPages;
+extern const uint8_t trump2HeightPixels;
+
+// Bitmap info for ball
+extern const uint8_t ballBitmaps[];
+extern const uint8_t ballWidthPages;
+extern const uint8_t ballHeightPixels;
+
+#endif

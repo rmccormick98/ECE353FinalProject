@@ -81,9 +81,15 @@ bool up_pressed(void)
 {
   static DEBOUNCE_STATES state = DEBOUNCE_ONE;
   uint8_t pin_logic_level;
+	bool button;
   pin_logic_level = io_expander_read_reg(MCP23017_GPIOB_R);
-  pin_logic_level &= 1<<U_PIN;
-  return debounce_fsm(&state, pin_logic_level);
+  // active low
+	pin_logic_level &= 1<<U_PIN;
+	button = debounce_fsm(&state, pin_logic_level);
+//	debounce_wait();
+	
+	button = debounce_fsm(&state, pin_logic_level);
+  return button;
 }
 
 //*****************************************************************************
@@ -96,6 +102,7 @@ bool down_pressed(void)
   uint8_t pin_logic_level;
   pin_logic_level = io_expander_read_reg(MCP23017_GPIOB_R);
   pin_logic_level &= 1<<D_PIN;
+	debounce_fsm(&state, pin_logic_level);
   return debounce_fsm(&state, pin_logic_level);
 }
 
@@ -105,11 +112,17 @@ bool down_pressed(void)
 //*****************************************************************************
 bool left_pressed(void)
 {
-  static DEBOUNCE_STATES state = DEBOUNCE_ONE;
+   static DEBOUNCE_STATES state = DEBOUNCE_ONE;
   uint8_t pin_logic_level;
+	bool button;
   pin_logic_level = io_expander_read_reg(MCP23017_GPIOB_R);
-  pin_logic_level &= 1<<L_PIN;
-  return debounce_fsm(&state, pin_logic_level);
+  // active low
+	pin_logic_level &= 1<<L_PIN;
+	button = debounce_fsm(&state, pin_logic_level);
+//	debounce_wait();
+	
+	button = debounce_fsm(&state, pin_logic_level);
+  return button;
 }
 
 //*****************************************************************************
@@ -118,9 +131,24 @@ bool left_pressed(void)
 //*****************************************************************************
 bool right_pressed(void)
 {
-  static DEBOUNCE_STATES state = DEBOUNCE_ONE;
+   static DEBOUNCE_STATES state = DEBOUNCE_ONE;
   uint8_t pin_logic_level;
+	bool button;
   pin_logic_level = io_expander_read_reg(MCP23017_GPIOB_R);
-  pin_logic_level &= 1<<R_PIN;
-  return debounce_fsm(&state, pin_logic_level);
+  // active low
+	pin_logic_level &= 1<<R_PIN;
+	button = debounce_fsm(&state, pin_logic_level);
+//	debounce_wait();
+	
+	button = debounce_fsm(&state, pin_logic_level);
+  return button;
+}
+void debounce_wait(void) 
+{
+  int i = 10000;
+  // Delay
+  while(i > 0)
+  {
+    i--;
+  }
 }
