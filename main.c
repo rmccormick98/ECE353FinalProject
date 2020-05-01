@@ -25,9 +25,9 @@
 // global variable for the ship position
 volatile bool CHANGE_DIR = true;
 volatile uint16_t SHIP_X_COORD = 190;
-volatile uint16_t SHIP_Y_COORD = 270;
+volatile uint16_t SHIP_Y_COORD = 310;
 volatile uint16_t INVADER_X_COORD = 50;
-volatile uint16_t INVADER_Y_COORD = 40;
+volatile uint16_t INVADER_Y_COORD = 31;
 
 volatile uint16_t BALL_X_COORD = 80;
 volatile uint16_t BALL_Y_COORD = 180;
@@ -39,45 +39,259 @@ volatile bool dir_ship = true;
 // bool to determine which character has ball
 // true for top, false for bottom
 volatile bool ball_possesion = true;
-// bool to determine is ball is moving or possessed
-volatile bool ball_stopped = true;
+
+//ended up using hit_trump and hit_clinton in replace of ball_stopped
+
+volatile bool hit_trump = true; 
+volatile bool hit_clinton = false;
+
+//volatile bool clear_ball = false;
+
+//used eventually to display lives with red leds of io expander, going to arbitatrily choose trump as ship
+volatile uint16_t lives_trump = 4;    
+volatile uint16_t lives_clinton = 4; 
+
 // global varaible flag to move ship
+
 
 //*****************************************************************************
 //*****************************************************************************
+// same as check game over in hw3
+// invader is the character and ship is the ball
+bool check_char(
+				volatile uint16_t ball_x_coord, 
+        volatile uint16_t ball_y_coord, 
+        uint8_t ball_height, 
+        uint8_t ball_width,
+        volatile uint16_t char_x_coord, 
+        volatile uint16_t char_y_coord, 
+        uint8_t char_height, 
+        uint8_t char_width
+
+){
+	
+	// rectangle variables for ball
+	uint16_t  top_s = ball_y_coord - (ball_height/2); 
+	uint16_t  bottom_s = ball_y_coord + (ball_height/2);
+	uint16_t right_s = ball_x_coord + (ball_width/2);
+	uint16_t  left_s = ball_x_coord - (ball_width/2);
+	// rectangle variables for invader
+	uint16_t top_r =  char_y_coord - (char_height/2); 
+	uint16_t bottom_r =  char_y_coord + (char_height/2); 
+	uint16_t right_r = char_x_coord + (char_width/2); 
+	uint16_t left_r = char_x_coord - (char_width/2);
+
+		// checks space ship underneath and right overlap
+		if(	 (bottom_r >= top_s && bottom_r <= bottom_s) && 
+			(right_r >= left_s && right_r <= right_s)){
+			//while(1){}
+				return true;
+			}
+			// checks space ship underneath and left overlap
+		else if ((bottom_r >= top_s && bottom_r <= bottom_s) && 
+			(left_r >= left_s && left_r <= right_s)){
+				return true;
+		}
+			// checks space ship above and right over lap
+		else if ((top_r >= top_s && top_r <= bottom_s) && 
+			(right_r >= left_s && right_r <= right_s)){
+				return true;
+		}
+			// checks space ship above and left over lap
+		else if ((top_r >= top_s && top_r <= bottom_s) && 
+			(left_r >= left_s && left_r <= right_s)){
+				return true;
+			// the below conditions check the case when the space ship 
+			// and invader overlap head on. This is necessary because
+			// the space ship area is less than the invader
+		}else if ((bottom_r >= top_s && bottom_r <= bottom_s) && 
+			(left_r <= left_s && right_r >= right_s)){
+				return true;
+		}else if ((top_r <= bottom_s && top_s <= top_r) && 
+			(left_r <= left_s && right_r >= right_s)){
+				return true;
+		}else if ((right_s >= left_r && left_r >= left_s) && 
+			(top_r <= top_s && bottom_r >= bottom_s)){
+			return true;
+		}else if ((right_r >= left_s && right_s >= right_r ) && 
+			(top_r <= top_s && bottom_r >= bottom_s)){
+			return true;
+		}
+	// default case
+  return false;
+	
+	
+	
+}
+void lives_led(){
+	int led_value;
+	
+	if(lives_clinton == 4 && lives_trump== 4){
+		 led_value = 0xFF;
+	}
+	else if(lives_clinton == 4 && lives_trump == 3){
+		 led_value = 0xF7;
+	}
+	else if(lives_clinton == 4  && lives_trump == 2){
+		 led_value = 0xF3;
+	}
+	else if(lives_clinton == 4  && lives_trump == 1){
+		led_value = 0xF1;
+	}
+	else if(lives_clinton == 4  && lives_trump == 0){
+		led_value = 0xF0;
+	}
+	else if(lives_clinton == 3 && lives_trump == 4){
+		 led_value = 0x7F;
+	}
+	else if(lives_clinton == 3 && lives_trump == 3){
+		 led_value = 0x77;
+	}
+	else if(lives_clinton == 3  && lives_trump == 2){
+		 led_value = 0x73;
+	}
+	else if(lives_clinton == 3  && lives_trump == 1){
+		led_value = 0x71;
+	}
+	else if(lives_clinton == 3  && lives_trump == 0){
+		led_value = 0x70;
+	}
+	else if(lives_clinton == 2 && lives_trump == 4){
+		 led_value = 0x3F;
+	}
+	else if(lives_clinton == 2 && lives_trump == 3){
+		 led_value = 0x37;
+	}
+	else if(lives_clinton == 2  && lives_trump == 2){
+		 led_value = 0x33;
+	}
+	else if(lives_clinton == 2  && lives_trump == 1){
+		led_value = 0x31;
+	}
+	else if(lives_clinton == 2  && lives_trump == 0){
+		led_value = 0x30;
+	}
+	else if(lives_clinton == 1 && lives_trump == 4){
+		 led_value = 0x1F;
+	}
+	else if(lives_clinton == 1 && lives_trump == 3){
+		 led_value = 0x17;
+	}
+	else if(lives_clinton == 1  && lives_trump == 2){
+		 led_value = 0x13;
+	}
+	else if(lives_clinton == 1  && lives_trump == 1){
+		led_value = 0x11;
+	}
+	else if(lives_clinton == 1  && lives_trump == 0){
+		led_value = 0x10;
+	}
+	else if(lives_clinton == 0 && lives_trump == 4){
+		 led_value = 0x0F;
+	}
+	else if(lives_clinton== 0 && lives_trump == 3){
+		 led_value = 0x07;
+	}
+	else if(lives_clinton == 0  && lives_trump == 2){
+		 led_value = 0x03;
+	}
+	else if(lives_clinton == 0  && lives_trump == 1){
+		led_value = 0x01;
+	}
+	else if(lives_clinton == 0  && lives_trump == 0){
+		led_value = 0x00;
+	}
+	
+  io_expander_write_reg(MCP23017_GPIOA_R, led_value);	
+	
+	
+	
+	
+	
+	
+	
+}
+
 // returns new ball_stopped value
-bool throw_ball(
-					bool ball_possesion,
-					bool ball_stopped,
+// returns value of ball_stopped
+ void throw_ball(
+					//bool ball_possesion,
+					//bool ball_stopped,
 					volatile uint16_t *ball_x, 
 					volatile uint16_t *ball_y,
 					uint8_t image_height, 
 					uint8_t image_width)
 {
-	printf("%u\n", *ball_y );
-	//BUG: need to change possesion
-	if(!ball_stopped){
-		// if top has has ball
+	bool hit;
+	bool edge;
+	//printf("%u\n", *ball_y );
+	/* Three cases for each character: 
+	 *	1) not on the edge or contacted a character -> continue moving ball good
+	 *	2) miss contacted edge and not character, stop and give ball to character
+	 *	3) hit character -> stop and give ball to character
+	 */
 		if(ball_possesion){
-			if(contact_edge(PS2_DIR_DOWN, *ball_x, *ball_y, ballHeightPixels, ballWidthPages)){
-				*ball_y = *ball_y + 1;
-				return false;
-			}else{ return true; }
+			hit = check_char(BALL_X_COORD, BALL_Y_COORD, ballHeightPixels, ballWidthPages, SHIP_X_COORD, SHIP_Y_COORD, space_shipHeightPixels, space_shipWidthPixels);
+		
+			edge = contact_edge(PS2_DIR_DOWN, *ball_x, *ball_y, ballHeightPixels, ballWidthPages);
+			
+			if(!hit_trump){
+				if( !hit && edge ){ //still moving down the screen
+					*ball_y = *ball_y + 1;
+					hit_trump = false;
+			
+				}else if (hit && edge) { //ball was still moving and contacted character, decrement lives and set hit_trump to true so ball will follow character
+					lives_trump = lives_trump - 1;
+					hit_trump = true;
+				
+				}else if(!edge){ //ball is on edge and character picked it up, do not decrement lives, set hit_trump to true so ball will follow character
+					// miss and ball is on edge
+					if(hit){
+						hit_trump = true;
+					}
+					else{
+					    hit_trump = false;
+					}
+					
+				}
+			}
+			// if bottom has ball
 		}else{
-			if(contact_edge(PS2_DIR_UP, *ball_x, *ball_y, ballHeightPixels, ballWidthPages)){
-				*ball_y = *ball_y - 1;
-				return false;
-			}else{ return true; }
+			hit = check_char(BALL_X_COORD, BALL_Y_COORD, ballHeightPixels, ballWidthPages, INVADER_X_COORD, INVADER_Y_COORD, invaderHeightPixels, invaderWidthPixels);
+			
+			edge = contact_edge(PS2_DIR_UP, *ball_x, *ball_y, ballHeightPixels, ballWidthPages);
+			
+			if(!hit_clinton){
+				if( !hit && edge ){ 
+					*ball_y = *ball_y - 1;
+					hit_clinton = false;
+			
+				}else if (hit && edge) { 
+					lives_clinton = lives_clinton - 1;
+					hit_clinton = true;
+			
+				}else if(!edge){   
+					if(hit){
+						hit_clinton = true;
+					}
+					else{
+							hit_clinton = false;
+					}
+			
+				}
+			}else{
+	
+			}
 	}
-}else{
-	return true;
-}
+
 
 }
+
+
 
 
 bool switch_direction(volatile uint16_t x_coord, uint8_t image_width)
-		{
+{
 					if((x_coord - (image_width/2)) <= 0 ){
 									dir_ship = false;
 					}
@@ -86,7 +300,7 @@ bool switch_direction(volatile uint16_t x_coord, uint8_t image_width)
 					}
 							
 			
-		}
+}
 
 
 void move_image(
@@ -189,15 +403,16 @@ main(void)
 {
 		uint16_t x,y;
 		uint8_t touch_event;
+	//	bool hit_char = false;
 		
 		SHIP_X_COORD = 190;
-		SHIP_Y_COORD = 270;
+		SHIP_Y_COORD = 300;
 		
 	//DisableInterrupts();
 	init_hardware();
 //EnableInterrupts();
 	
-	printf("test\n");
+
     while(1){
 		while(pause_game){
 				 // lcd_clear_screen(LCD_COLOR_BLACK);
@@ -234,20 +449,6 @@ main(void)
 		
 		switch_direction(SHIP_X_COORD, space_shipWidthPixels);
 		
-//		if(CHANGE_DIR)
-//          {
-//            CHANGE_DIR = false;
-//            
-//            lcd_draw_image(
-//                          SHIP_X_COORD,                       // X Center Point
-//                          space_shipWidthPixels,   // Image Horizontal Width
-//                          SHIP_Y_COORD,                       // Y Center Point
-//                          space_shipHeightPixels,  // Image Vertical Height
-//                          space_shipBitmaps,       // Image
-//                          LCD_COLOR_BLUE,           // Foreground Color
-//                          LCD_COLOR_BLACK          // Background Color
-//                        );
-//		}
 					
 		  if(ALERT_INVADER)
 					{
@@ -273,8 +474,10 @@ main(void)
                           LCD_COLOR_BLACK           // Background Color
                         );	
 					
-					ball_stopped = throw_ball(ball_possesion, ball_stopped, &BALL_X_COORD, &BALL_Y_COORD, ballHeightPixels, ballWidthPages);
-					printf("%d/n", ball_stopped);
+					throw_ball(&BALL_X_COORD, &BALL_Y_COORD, ballHeightPixels, ballWidthPages);
+					
+				if(!hit_clinton && !hit_trump){
+					
 					lcd_draw_image(
 													BALL_X_COORD,          // X Center Point
                           ballWidthPages,       // Image Horizontal Width
@@ -284,19 +487,55 @@ main(void)
                           LCD_COLOR_GREEN,            // Foreground Color
                           LCD_COLOR_BLACK           // Background Color
                         );	
+				}
+				else{ //clearing the image from the screen, not sure if this the best way to do that
+								lcd_draw_image(
+													BALL_X_COORD,          // X Center Point
+                          ballWidthPages,       // Image Horizontal Width
+                          BALL_Y_COORD,          // Y Center Point
+                          ballHeightPixels,      // Image Vertical Height
+                          ballBitmaps,           // Image
+                          LCD_COLOR_BLACK,            // Foreground Color
+                          LCD_COLOR_BLACK           // Background Color
+                        );	
 					
-			if(ball_stopped && (touch_event > 0)){
+				}
+		if(hit_clinton){
+			  BALL_X_COORD = INVADER_X_COORD;
+			  BALL_Y_COORD = INVADER_Y_COORD + (invaderHeightPixels / 2) + (ballHeightPixels/2);
+			
+		}
+		if(hit_trump){
+			  BALL_X_COORD = SHIP_X_COORD;
+			  BALL_Y_COORD = SHIP_Y_COORD - (space_shipHeightPixels / 2) - (ballHeightPixels/2);
+			
+		}
+
+		if((touch_event > 0)){  //
 				x = ft6x06_read_x();
 				y = ft6x06_read_y();
-				ball_stopped = false;
-				ball_possesion = false;
-			printf("X coordinate= %d Y coordinate= %d\n", x, y);
+			  if(ball_possesion && (y<=160) && hit_trump){
+				
+					hit_trump = false;
+					ball_possesion = !ball_possesion;
+				}
+				else if((!ball_possesion) &&  (y>=160) && hit_clinton){
+						
+							hit_clinton = false;
+					    ball_possesion = !ball_possesion;
+				}
+					
+	
 		}
-			if(BLINK_LED){
+			
+		
+		
+		if(BLINK_LED){
 				BLINK_LED = false;
 				// toggle
 				GPIOF->DATA = GPIOF->DATA ^ BLUE_M;
 			}
+		lives_led();
 			
 
 		}
