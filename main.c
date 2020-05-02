@@ -25,12 +25,19 @@
 // global variable for the ship position
 volatile bool CHANGE_DIR = true;
 volatile uint16_t SHIP_X_COORD = 190;
-volatile uint16_t SHIP_Y_COORD = 310;
+volatile uint16_t SHIP_Y_COORD = 259;
 volatile uint16_t INVADER_X_COORD = 50;
-volatile uint16_t INVADER_Y_COORD = 31;
+volatile uint16_t INVADER_Y_COORD = 61;
 
-volatile uint16_t BALL_X_COORD = 80;
-volatile uint16_t BALL_Y_COORD = 180;
+volatile uint16_t BALL_X_COORD_1 = 80;
+volatile uint16_t BALL_Y_COORD_1 = 180;
+
+volatile uint16_t BALL_X_COORD_2 = 80;
+volatile uint16_t BALL_Y_COORD_2 = 180;
+
+volatile int trump_ball_cnt = 1;
+volatile int clinton_ball_cnt = 1;
+
 
 volatile bool ALERT_INVADER = true;
 volatile bool BLINK_LED = false;
@@ -38,16 +45,20 @@ volatile bool pause_game = false;
 volatile bool dir_ship = true;
 // bool to determine which character has ball
 // true for top, false for bottom
-volatile bool ball_possesion = true;
+volatile bool ball_possesion_1 = true;
+volatile bool ball_possesion_2 = false;
 
-//ended up using hit_trump and hit_clinton in replace of ball_stopped
+//ended up using hit_trump_1 and hit_clinton_1 in replace of ball_stopped
 
-volatile bool hit_trump = true; 
-volatile bool hit_clinton = false;
+volatile bool hit_trump_1 = true; 
+volatile bool hit_clinton_1 = false;
+
+volatile bool hit_trump_2 = false; 
+volatile bool hit_clinton_2 = true;
 
 //volatile bool clear_ball = false;
 
-//used eventually to display lives with red leds of io expander, going to arbitatrily choose trump as ship
+//used eventually to display lives with red leds of io expander, going to arbitatrily choose trump as invader
 volatile uint16_t lives_trump = 4;    
 volatile uint16_t lives_clinton = 4; 
 
@@ -59,8 +70,8 @@ volatile uint16_t lives_clinton = 4;
 // same as check game over in hw3
 // invader is the character and ship is the ball
 bool check_char(
-				volatile uint16_t ball_x_coord, 
-        volatile uint16_t ball_y_coord, 
+				volatile uint16_t BALL_X_COORD, 
+        volatile uint16_t BALL_Y_COORD, 
         uint8_t ball_height, 
         uint8_t ball_width,
         volatile uint16_t char_x_coord, 
@@ -71,10 +82,10 @@ bool check_char(
 ){
 	
 	// rectangle variables for ball
-	uint16_t  top_s = ball_y_coord - (ball_height/2); 
-	uint16_t  bottom_s = ball_y_coord + (ball_height/2);
-	uint16_t right_s = ball_x_coord + (ball_width/2);
-	uint16_t  left_s = ball_x_coord - (ball_width/2);
+	uint16_t  top_s = BALL_Y_COORD - (ball_height/2); 
+	uint16_t  bottom_s = BALL_Y_COORD + (ball_height/2);
+	uint16_t right_s = BALL_X_COORD + (ball_width/2);
+	uint16_t  left_s = BALL_X_COORD - (ball_width/2);
 	// rectangle variables for invader
 	uint16_t top_r =  char_y_coord - (char_height/2); 
 	uint16_t bottom_r =  char_y_coord + (char_height/2); 
@@ -203,22 +214,18 @@ void lives_led(){
 	}
 	
   io_expander_write_reg(MCP23017_GPIOA_R, led_value);	
-	
-	
-	
-	
-	
-	
-	
+
 }
 
 // returns new ball_stopped value
 // returns value of ball_stopped
  void throw_ball(
-					//bool ball_possesion,
+					//bool ball_possesion_1,
 					//bool ball_stopped,
 					volatile uint16_t *ball_x, 
 					volatile uint16_t *ball_y,
+					volatile uint16_t *ball_x_2, 
+					volatile uint16_t *ball_y_2,			
 					uint8_t image_height, 
 					uint8_t image_width)
 {
@@ -230,60 +237,114 @@ void lives_led(){
 	 *	2) miss contacted edge and not character, stop and give ball to character
 	 *	3) hit character -> stop and give ball to character
 	 */
-		if(ball_possesion){
-			hit = check_char(BALL_X_COORD, BALL_Y_COORD, ballHeightPixels, ballWidthPages, SHIP_X_COORD, SHIP_Y_COORD, space_shipHeightPixels, space_shipWidthPixels);
+		if(ball_possesion_1){
+			hit = check_char(BALL_X_COORD_1, BALL_Y_COORD_1, ballHeightPixels, ballWidthPages, SHIP_X_COORD, SHIP_Y_COORD, space_shipHeightPixels, space_shipWidthPixels);
 		
 			edge = contact_edge(PS2_DIR_DOWN, *ball_x, *ball_y, ballHeightPixels, ballWidthPages);
 			
-			if(!hit_trump){
+			if(!hit_trump_1){
 				if( !hit && edge ){ //still moving down the screen
 					*ball_y = *ball_y + 1;
-					hit_trump = false;
+					hit_trump_1 = false;
 			
-				}else if (hit && edge) { //ball was still moving and contacted character, decrement lives and set hit_trump to true so ball will follow character
+				}else if (hit && edge) { //ball was still moving and contacted character, decrement lives and set hit_trump_1 to true so ball will follow character
 					lives_trump = lives_trump - 1;
-					hit_trump = true;
+					hit_trump_1 = true;
+					trump_ball_cnt = trump_ball_cnt + 1;
 				
-				}else if(!edge){ //ball is on edge and character picked it up, do not decrement lives, set hit_trump to true so ball will follow character
+				}else if(!edge){ //ball is on edge and character picked it up, do not decrement lives, set hit_trump_1 to true so ball will follow character
 					// miss and ball is on edge
 					if(hit){
-						hit_trump = true;
+						hit_trump_1 = true;
+						trump_ball_cnt = trump_ball_cnt + 1;
 					}
 					else{
-					    hit_trump = false;
+					    hit_trump_1 = false;
 					}
-					
 				}
 			}
 			// if bottom has ball
 		}else{
-			hit = check_char(BALL_X_COORD, BALL_Y_COORD, ballHeightPixels, ballWidthPages, INVADER_X_COORD, INVADER_Y_COORD, invaderHeightPixels, invaderWidthPixels);
+			hit = check_char(BALL_X_COORD_1, BALL_Y_COORD_1, ballHeightPixels, ballWidthPages, INVADER_X_COORD, INVADER_Y_COORD, invaderHeightPixels, invaderWidthPixels);
 			
 			edge = contact_edge(PS2_DIR_UP, *ball_x, *ball_y, ballHeightPixels, ballWidthPages);
 			
-			if(!hit_clinton){
+			if(!hit_clinton_1){
 				if( !hit && edge ){ 
 					*ball_y = *ball_y - 1;
-					hit_clinton = false;
+					hit_clinton_1 = false;
 			
 				}else if (hit && edge) { 
 					lives_clinton = lives_clinton - 1;
-					hit_clinton = true;
+					hit_clinton_1 = true;
+					clinton_ball_cnt = clinton_ball_cnt + 1;
 			
 				}else if(!edge){   
 					if(hit){
-						hit_clinton = true;
+						hit_clinton_1 = true;
+						clinton_ball_cnt = clinton_ball_cnt + 1;
 					}
 					else{
-							hit_clinton = false;
+							hit_clinton_1 = false;
 					}
-			
 				}
-			}else{
-	
 			}
 	}
-
+		
+	
+	if(ball_possesion_2){
+			hit = check_char(BALL_X_COORD_2, BALL_Y_COORD_2, ballHeightPixels, ballWidthPages, SHIP_X_COORD, SHIP_Y_COORD, space_shipHeightPixels, space_shipWidthPixels);
+		
+			edge = contact_edge(PS2_DIR_DOWN, *ball_x_2, *ball_y_2, ballHeightPixels, ballWidthPages);
+			
+			if(!hit_trump_2){
+				if( !hit && edge ){ //still moving down the screen
+					*ball_y_2 = *ball_y_2 + 1;
+					hit_trump_2 = false;
+			
+				}else if (hit && edge) { //ball was still moving and contacted character, decrement lives and set hit_trump_1 to true so ball will follow character
+					lives_trump = lives_trump - 1;
+					hit_trump_2 = true;
+					trump_ball_cnt = clinton_ball_cnt + 1;
+				
+				}else if(!edge){ //ball is on edge and character picked it up, do not decrement lives, set hit_trump_1 to true so ball will follow character
+					// miss and ball is on edge
+					if(hit){
+						hit_trump_2 = true;
+						trump_ball_cnt = clinton_ball_cnt + 1;
+					}
+					else{
+					    hit_trump_2 = false;
+					}
+				}
+			}
+			// if bottom has ball
+		}else{
+			hit = check_char(BALL_X_COORD_2, BALL_Y_COORD_2, ballHeightPixels, ballWidthPages, INVADER_X_COORD, INVADER_Y_COORD, invaderHeightPixels, invaderWidthPixels);
+			
+			edge = contact_edge(PS2_DIR_UP, *ball_x_2, *ball_y_2, ballHeightPixels, ballWidthPages);
+			
+			if(!hit_clinton_2){
+				if( !hit && edge ){ 
+					*ball_y_2 = *ball_y_2 - 1;
+					hit_clinton_2 = false;
+			
+				}else if (hit && edge) { 
+					lives_clinton = lives_clinton - 1;
+					hit_clinton_2 = true;
+					clinton_ball_cnt = clinton_ball_cnt + 1;
+			
+				}else if(!edge){   
+					if(hit){
+						hit_clinton_2 = true;
+						clinton_ball_cnt = clinton_ball_cnt + 1;
+					}
+					else{
+							hit_clinton_2 = false;
+					}
+				}
+			}
+	}
 
 }
 
@@ -403,10 +464,15 @@ main(void)
 {
 		uint16_t x,y;
 		uint8_t touch_event;
+		bool start_game = false;
+		
+	  bool clear_image_1 = true;
+	  bool clear_image_2 = true;
+	//uint16_t ball_r = 15;
 	//	bool hit_char = false;
 		
 		SHIP_X_COORD = 190;
-		SHIP_Y_COORD = 300;
+		SHIP_Y_COORD = 259;
 		
 	//DisableInterrupts();
 	init_hardware();
@@ -414,7 +480,20 @@ main(void)
 	
 
     while(1){
-		while(pause_game){
+//			while(!start_game){
+//				lcd_draw_image(
+//                          103,                       // X Center Point
+//                          title2WidthPixels,   // Image Horizontal Width
+//                          119,                       // Y Center Point
+//                          title2HeightPixels,  // Image Vertical Height
+//                          title2Bitmaps,       // Image
+//                          LCD_COLOR_BLUE,           // Foreground Color
+//                          LCD_COLOR_RED          // Background Color
+//                        );
+//				
+//			}
+			
+			while(pause_game){
 				 // lcd_clear_screen(LCD_COLOR_BLACK);
 		
 		}
@@ -450,20 +529,7 @@ main(void)
 		switch_direction(SHIP_X_COORD, space_shipWidthPixels);
 		
 					
-		  if(ALERT_INVADER)
-					{
-            ALERT_INVADER = false;
-            
-             lcd_draw_image(
-                          INVADER_X_COORD,          // X Center Point
-                          invaderWidthPixels,       // Image Horizontal Width
-                          INVADER_Y_COORD,          // Y Center Point
-                          invaderHeightPixels,      // Image Vertical Height
-                          invaderBitmaps,           // Image
-                          LCD_COLOR_RED,            // Foreground Color
-                          LCD_COLOR_BLACK           // Background Color
-                        );
-					}
+
 				 lcd_draw_image(
                           INVADER_X_COORD,          // X Center Point
                           invaderWidthPixels,       // Image Horizontal Width
@@ -474,25 +540,29 @@ main(void)
                           LCD_COLOR_BLACK           // Background Color
                         );	
 					
-					throw_ball(&BALL_X_COORD, &BALL_Y_COORD, ballHeightPixels, ballWidthPages);
+					throw_ball(&BALL_X_COORD_1, &BALL_Y_COORD_1,&BALL_X_COORD_2, &BALL_Y_COORD_2, ballHeightPixels, ballWidthPages);
 					
-				if(!hit_clinton && !hit_trump){
-					
+				if(!hit_clinton_1 && !hit_trump_1){
+					clear_image_1 = true;
 					lcd_draw_image(
-													BALL_X_COORD,          // X Center Point
+													BALL_X_COORD_1,          // X Center Point
                           ballWidthPages,       // Image Horizontal Width
-                          BALL_Y_COORD,          // Y Center Point
+                          BALL_Y_COORD_1,          // Y Center Point
                           ballHeightPixels,      // Image Vertical Height
                           ballBitmaps,           // Image
                           LCD_COLOR_GREEN,            // Foreground Color
                           LCD_COLOR_BLACK           // Background Color
                         );	
+					
+					
+					
 				}
-				else{ //clearing the image from the screen, not sure if this the best way to do that
-								lcd_draw_image(
-													BALL_X_COORD,          // X Center Point
+				else if(clear_image_1){ //clearing the image from the screen, not sure if this the best way to do that
+						clear_image_1 = false;
+						lcd_draw_image(
+													BALL_X_COORD_1,          // X Center Point
                           ballWidthPages,       // Image Horizontal Width
-                          BALL_Y_COORD,          // Y Center Point
+                          BALL_Y_COORD_1,          // Y Center Point
                           ballHeightPixels,      // Image Vertical Height
                           ballBitmaps,           // Image
                           LCD_COLOR_BLACK,            // Foreground Color
@@ -500,35 +570,88 @@ main(void)
                         );	
 					
 				}
-		if(hit_clinton){
-			  BALL_X_COORD = INVADER_X_COORD;
-			  BALL_Y_COORD = INVADER_Y_COORD + (invaderHeightPixels / 2) + (ballHeightPixels/2);
+				
+				if(!hit_clinton_2 && !hit_trump_2){
+					clear_image_2 = true;
+					lcd_draw_image(
+													BALL_X_COORD_2,          // X Center Point
+                          ballWidthPages,       // Image Horizontal Width
+                          BALL_Y_COORD_2,          // Y Center Point
+                          ballHeightPixels,      // Image Vertical Height
+                          ballBitmaps,           // Image
+                          LCD_COLOR_BLUE,            // Foreground Color
+                          LCD_COLOR_BLACK           // Background Color
+                        );	
+					
+					
+					
+				}
+				else if(clear_image_2) { //clearing the image from the screen, not sure if this the best way to do that
+							clear_image_2 = false;
+							lcd_draw_image(
+													BALL_X_COORD_2,          // X Center Point
+                          ballWidthPages,       // Image Horizontal Width
+                          BALL_Y_COORD_2,          // Y Center Point
+                          ballHeightPixels,      // Image Vertical Height
+                          ballBitmaps,           // Image
+                          LCD_COLOR_BLACK,            // Foreground Color
+                          LCD_COLOR_BLACK           // Background Color
+                        );	
+					
+				}
+				
+		if(hit_clinton_1){
+			  BALL_X_COORD_1 = INVADER_X_COORD;
+			  BALL_Y_COORD_1 = INVADER_Y_COORD + (invaderHeightPixels / 2) + (ballHeightPixels/2);
 			
 		}
-		if(hit_trump){
-			  BALL_X_COORD = SHIP_X_COORD;
-			  BALL_Y_COORD = SHIP_Y_COORD - (space_shipHeightPixels / 2) - (ballHeightPixels/2);
+		if(hit_trump_1){
+			  BALL_X_COORD_1 = SHIP_X_COORD;
+			  BALL_Y_COORD_1 = SHIP_Y_COORD - (space_shipHeightPixels / 2) - (ballHeightPixels/2);
+			
+		}
+		if(hit_clinton_2){
+			  BALL_X_COORD_2 = INVADER_X_COORD;
+			  BALL_Y_COORD_2 = INVADER_Y_COORD + (invaderHeightPixels / 2) + (ballHeightPixels/2);
+			
+		}
+		if(hit_trump_2){
+			  BALL_X_COORD_2 = SHIP_X_COORD;
+			  BALL_Y_COORD_2 = SHIP_Y_COORD - (space_shipHeightPixels / 2) - (ballHeightPixels/2);
 			
 		}
 
+	
+		
+		
 		if((touch_event > 0)){  //
 				x = ft6x06_read_x();
 				y = ft6x06_read_y();
-			  if(ball_possesion && (y<=160) && hit_trump){
-				
-					hit_trump = false;
-					ball_possesion = !ball_possesion;
-				}
-				else if((!ball_possesion) &&  (y>=160) && hit_clinton){
-						
-							hit_clinton = false;
-					    ball_possesion = !ball_possesion;
-				}
-					
-	
-		}
+			  if(ball_possesion_1 && (y<=160) && hit_trump_1){
+				  trump_ball_cnt = trump_ball_cnt - 1;
+					hit_trump_1 = false;
 			
-		
+					ball_possesion_1 = !ball_possesion_1;
+				}
+				else if(ball_possesion_2 && (y<=160) && hit_trump_2){                 
+				
+					hit_trump_2 = false;
+					trump_ball_cnt = trump_ball_cnt - 1;
+					ball_possesion_2 = !ball_possesion_2;
+				}
+				if((!ball_possesion_1) &&  (y>=160) && hit_clinton_1){
+						
+							hit_clinton_1 = false;	
+					    clinton_ball_cnt = clinton_ball_cnt - 1;
+					    ball_possesion_1 = !ball_possesion_1;
+				}
+				else if((!ball_possesion_2) &&  (y>=160) && hit_clinton_2){              
+						
+							hit_clinton_2 = false;
+					    clinton_ball_cnt = clinton_ball_cnt - 1;
+					    ball_possesion_2 = !ball_possesion_2;
+				}
+		}	
 		
 		if(BLINK_LED){
 				BLINK_LED = false;
