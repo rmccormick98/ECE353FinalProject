@@ -28,6 +28,8 @@ volatile uint16_t SHIP_X_COORD = 190;
 volatile uint16_t SHIP_Y_COORD = 259;
 volatile uint16_t INVADER_X_COORD = 50;
 volatile uint16_t INVADER_Y_COORD = 61;
+//starting positions of trump and clinton
+
 
 volatile uint16_t BALL_X_COORD_1 = 80;
 volatile uint16_t BALL_Y_COORD_1 = 180;
@@ -35,16 +37,18 @@ volatile uint16_t BALL_Y_COORD_1 = 180;
 volatile uint16_t BALL_X_COORD_2 = 80;
 volatile uint16_t BALL_Y_COORD_2 = 180;
 
+//number of balls they start with
 volatile int trump_ball_cnt = 1;
 volatile int clinton_ball_cnt = 1;
 
+//throw counter is used to a player cannot throw two balls at the same time so they do not overlap on the screen
 volatile int throw_counter = 0;
 volatile bool allowed_to_throw = true;
 
-
+//used for movement of characters
 volatile bool ALERT_INVADER = true;
 volatile bool BLINK_LED = false;
-volatile bool pause_game = false;
+volatile bool pause_game = false; //used for uart and pausing
 volatile bool dir_ship = true;
 // bool to determine which character has ball
 // true for top, false for bottom
@@ -55,7 +59,7 @@ volatile bool ball_possesion_2 = false;
 
 volatile bool hit_trump_1 = true; 
 volatile bool hit_clinton_1 = false;
-
+//whether or not the character actually has possession of the ball
 volatile bool hit_trump_2 = false; 
 volatile bool hit_clinton_2 = true;
 
@@ -186,6 +190,7 @@ bool check_char(
 	
 	
 }
+//fuction that checks how many lives trump/clinton has and writes the appopriate number of leds to io expander
 void lives_led(){
 	int led_value;
 	
@@ -283,12 +288,13 @@ void lives_led(){
 {
 	bool hit;
 	bool edge;
-	//printf("%u\n", *ball_y );
+	
 	/* Three cases for each character: 
 	 *	1) not on the edge or contacted a character -> continue moving ball good
-	 *	2) miss contacted edge and not character, stop and give ball to character
-	 *	3) hit character -> stop and give ball to character
-	 */
+	 *	2) miss contacted edge and not character, stop and give ball to character after they pick it up
+	 *	3) hit character -> stop and give ball to character, decrement life
+	 *  
+	*/
 		if(ball_possesion_1){
 			hit = check_char(BALL_X_COORD_1, BALL_Y_COORD_1, ballHeightPixels, ballWidthPages, SHIP_X_COORD, SHIP_Y_COORD, space_shipHeightPixels, space_shipWidthPixels);
 		
@@ -301,13 +307,13 @@ void lives_led(){
 			
 				}else if (hit && edge) { //ball was still moving and contacted character, decrement lives and set hit_trump_1 to true so ball will follow character
 					lives_trump = lives_trump - 1;
-					hit_trump_1 = true;
+					hit_trump_1 = true; //trump now has possession of ball
 					trump_ball_cnt = trump_ball_cnt + 1;
 				
 				}else if(!edge){ //ball is on edge and character picked it up, do not decrement lives, set hit_trump_1 to true so ball will follow character
 					// miss and ball is on edge
 					if(hit){
-						hit_trump_1 = true;
+						hit_trump_1 = true; //trump now has possession of ball
 						trump_ball_cnt = trump_ball_cnt + 1;
 					}
 					else{
@@ -326,15 +332,15 @@ void lives_led(){
 					*ball_y = *ball_y - 1;
 					hit_clinton_1 = false;
 			
-				}else if (hit && edge) { 
-					lives_clinton = lives_clinton - 1;
-					hit_clinton_1 = true;
+				}else if (hit && edge) { //ball was still moving down the screen 
+					lives_clinton = lives_clinton - 1;  //decrement lives
+					hit_clinton_1 = true; //clinton now possess ball
 					clinton_ball_cnt = clinton_ball_cnt + 1;
 			
 				}else if(!edge){   
 					if(hit){
-						hit_clinton_1 = true;
-						clinton_ball_cnt = clinton_ball_cnt + 1;
+						hit_clinton_1 = true; //clinton now possess other ball
+						clinton_ball_cnt = clinton_ball_cnt + 1; //increase ball count
 					}
 					else{
 							hit_clinton_1 = false;
@@ -377,21 +383,21 @@ void lives_led(){
 			edge = contact_edge(PS2_DIR_UP, *ball_x_2, *ball_y_2, ballHeightPixels, ballWidthPages);
 			
 			if(!hit_clinton_2){
-				if( !hit && edge ){ 
+				if( !hit && edge ){ //ball continues moving down screen
 					*ball_y_2 = *ball_y_2 - 1;
 					hit_clinton_2 = false;
 			
-				}else if (hit && edge) { 
+				}else if (hit && edge) { //decrement lives and and set clinton to possess this ball
 					lives_clinton = lives_clinton - 1;
 					hit_clinton_2 = true;
 					clinton_ball_cnt = clinton_ball_cnt + 1;
 			
 				}else if(!edge){   
-					if(hit){
+					if(hit){ //clinton picked up ball normally
 						hit_clinton_2 = true;
 						clinton_ball_cnt = clinton_ball_cnt + 1;
 					}
-					else{
+					else{ //does not have possession yet
 							hit_clinton_2 = false;
 					}
 				}
@@ -402,7 +408,7 @@ void lives_led(){
 
 
 
-
+//this function is used to move clinton back and forth if the player is not actively controlling her
 bool switch_direction(volatile uint16_t x_coord, uint8_t image_width)
 {
 					if((x_coord - (image_width/2)) <= 0 ){
@@ -442,7 +448,7 @@ void move_image(
 		}
 		
 }
-
+//used to detect if ball has reached edge and helps to decrement lives of character or not
 bool contact_edge(
     volatile PS2_DIR_t direction,
     volatile uint16_t x_coord, 
@@ -490,6 +496,8 @@ bool contact_edge(
 							return true;
 					}
 }
+
+//funcion used with eeprom to display the current highest winning streak
 void draw_num(uint8_t num){
 		const uint8_t *image;
 		FONT_CHAR_INFO* info;
@@ -571,7 +579,8 @@ main(void)
 		uint8_t s_y = 110;
 		bool s_ball_xincreasing = true;
 		bool s_ball_yincreasing = true;
-	  int trump_x_pause = 0;
+	  //values used to help pause the game and keep the balls/ clinton/trump in the same location
+  	int trump_x_pause = 0;
 	  int trump_y_pause = 0;
 	  int clinton_x_pause = 0;
 	  int clinton_y_pause = 0;
@@ -648,6 +657,7 @@ main(void)
 			draw_num(read_val);
 			}
 		}
+		//continues the main screen until character taps the screen to go into the game
 while(!start_game){
 			touch_event = ft6x06_read_td_status();
 		if(touch_event > 0){
@@ -681,7 +691,7 @@ start_game = false;
                           LCD_COLOR_GREEN,            // Foreground Color
                           LCD_COLOR_BLACK           // Background Color
                         );
-					
+				//code using for animation of ball in the main screen
 				if(s_ball_xincreasing){
 				s_ball_xOffset = s_ball_xOffset + 1;
 				}else{
@@ -713,21 +723,11 @@ start_game = false;
 				
 			}
 			lcd_clear_screen(LCD_COLOR_BLACK);
-    while(!end_game){
-//			while(!start_game){
-//				lcd_draw_image(
-//                          103,                       // X Center Point
-//                          title2WidthPixels,   // Image Horizontal Width
-//                          119,                       // Y Center Point
-//                          title2HeightPixels,  // Image Vertical Height
-//                          title2Bitmaps,       // Image
-//                          LCD_COLOR_BLUE,           // Foreground Color
-//                          LCD_COLOR_RED          // Background Color
-//                        );
-//				
-//			}
+    //the main loop of the game that will continue until our code detects an end game condition
+		while(!end_game){
+
 			
-			
+			//records positions of characters when we deteced a paused game
 			if(pause_game){
 					  trump_x_pause = SHIP_X_COORD;
 					  trump_y_pause = SHIP_Y_COORD;
@@ -741,7 +741,7 @@ start_game = false;
 				
 				
 			}
-	
+	    //keeps the characters in the same position
 			while(pause_game){
 						 SHIP_X_COORD = trump_x_pause;
 					  SHIP_Y_COORD = trump_y_pause;
@@ -757,7 +757,7 @@ start_game = false;
 			touch_event = ft6x06_read_td_status();
 	
 		
-		
+		//used to help move clinton and change her x positioning
 		if(dir_ship){
 			SHIP_X_COORD--;
 			 lcd_draw_image(
@@ -782,7 +782,7 @@ start_game = false;
                           LCD_COLOR_BLACK          // Background Color
                         );
 		}
-		
+		//calling helper method if clinton reached the edge
 		switch_direction(SHIP_X_COORD, space_shipWidthPixels);
 		
 					
@@ -796,10 +796,12 @@ start_game = false;
                           LCD_COLOR_RED,            // Foreground Color
                           LCD_COLOR_BLACK           // Background Color
                         );	
-					
+					//function used for a lot of game logic calling, like determing possession and whether not not the ball should continue moving
 					throw_ball(&BALL_X_COORD_1, &BALL_Y_COORD_1,&BALL_X_COORD_2, &BALL_Y_COORD_2, ballHeightPixels, ballWidthPages);
 					
-				if(!hit_clinton_1 && !hit_trump_1){
+				
+		//if the ball not in position of one of players
+		if(!hit_clinton_1 && !hit_trump_1){
 					clear_image_1 = true;
 					lcd_draw_image(
 													BALL_X_COORD_1,          // X Center Point
@@ -813,8 +815,8 @@ start_game = false;
 					
 					
 					
-				}
-				else if(clear_image_1){ //clearing the image from the screen, not sure if this the best way to do that
+				} //if ball was in position of one of players clear it from the screen
+				else if(clear_image_1){ 
 						clear_image_1 = false;
 						lcd_draw_image(
 													BALL_X_COORD_1,          // X Center Point
@@ -827,7 +829,7 @@ start_game = false;
                         );	
 					
 				}
-				
+				//if ball is not possesed by either player
 				if(!hit_clinton_2 && !hit_trump_2){
 					clear_image_2 = true;
 					lcd_draw_image(
@@ -842,8 +844,8 @@ start_game = false;
 					
 					
 					
-				}
-				else if(clear_image_2) { //clearing the image from the screen, not sure if this the best way to do that
+				} //if ball is now possessed by one of players
+				else if(clear_image_2) { 
 							clear_image_2 = false;
 							lcd_draw_image(
 													BALL_X_COORD_2,          // X Center Point
@@ -856,7 +858,7 @@ start_game = false;
                         );	
 					
 				}
-				
+			//while the ball possessed by one of players it should follow them around the screen	
 		if(hit_clinton_1){
 			  BALL_X_COORD_1 = INVADER_X_COORD;
 			  BALL_Y_COORD_1 = INVADER_Y_COORD + (invaderHeightPixels / 2) + (ballHeightPixels/2);
@@ -877,23 +879,23 @@ start_game = false;
 			  BALL_Y_COORD_2 = SHIP_Y_COORD - (space_shipHeightPixels / 2) - (ballHeightPixels/2);
 			
 		}
-   // while(trump_ball_cnt == 2){};
+
 	
-		
+		//boolean used so a player cant throw two balls at once
 		if(allowed_to_throw)
-		if((touch_event > 0)){  //
+		if((touch_event > 0)){  //detecting touch event
 				x = ft6x06_read_x();
 				y = ft6x06_read_y();
-			  if(ball_possesion_1 && (y<=160) && hit_trump_1){
+			  if(ball_possesion_1 && (y<=160) && hit_trump_1){//trump should only be able to throw if top half of screen
 				  if(trump_ball_cnt == 2){
 							allowed_to_throw = false;
 							throw_counter = 0;
 			    } 
-					trump_ball_cnt = trump_ball_cnt - 1;
+					trump_ball_cnt = trump_ball_cnt - 1;//ball count goes down by one
 					hit_trump_1 = false;
 					ball_possesion_1 = !ball_possesion_1;
 				}
-				else if(ball_possesion_2 && (y<=160) && hit_trump_2){                 
+				else if(ball_possesion_2 && (y<=160) && hit_trump_2){//used to help throw the second ball if trump has it                  
 				  if(trump_ball_cnt == 2){
 							allowed_to_throw = false;
 							throw_counter = 0;
@@ -902,27 +904,27 @@ start_game = false;
 					trump_ball_cnt = trump_ball_cnt - 1;
 					ball_possesion_2 = !ball_possesion_2;
 				}
-				if((!ball_possesion_1) &&  (y>=160) && hit_clinton_1){
+				if((!ball_possesion_1) &&  (y>=160) && hit_clinton_1){ //clinton possesses one ball and tries to throw it 
 						  if(clinton_ball_cnt == 2){
-								allowed_to_throw = false;
+								allowed_to_throw = false; //no longer in her possession
 								throw_counter = 0;
 						} 
 					    hit_clinton_1 = false;	
 					    clinton_ball_cnt = clinton_ball_cnt - 1;
 					    ball_possesion_1 = !ball_possesion_1;
 				}
-				else if((!ball_possesion_2) &&  (y>=160) && hit_clinton_2){              
+				else if((!ball_possesion_2) &&  (y>=160) && hit_clinton_2){  //clinton possesses second ball and throws it            
 						  if(clinton_ball_cnt == 2){
 								allowed_to_throw = false;
 								throw_counter = 0;
 			        } 
-							hit_clinton_2 = false;
+							hit_clinton_2 = false; //no longer in her possession 
 					    clinton_ball_cnt = clinton_ball_cnt - 1;
 					    ball_possesion_2 = !ball_possesion_2;
 				}
 		}	
 	  throw_counter = throw_counter + 1;
-		if(throw_counter == 25){
+		if(throw_counter == 25){ //counter used so no player can throw ball two balls within 25 iterations of main while loop
 				allowed_to_throw = true;
 		}
 		
