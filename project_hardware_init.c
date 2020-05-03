@@ -37,13 +37,24 @@ bool init_hardware(void){
 	io_expander_write_reg(MCP23017_GPIOA_R, 0xFF);
 	configure_buttons();
 	// configure timers
-	 gp_timer_config_32(TIMER1_BASE,TIMER_TAMR_TAMR_PERIOD, 50000000, false, true);
-	gp_timer_config_32(TIMER2_BASE,TIMER_TAMR_TAMR_PERIOD, 1000000, false, true);
-	gp_timer_config_32(TIMER3_BASE,TIMER_TAMR_TAMR_PERIOD, 500000, false, true);
-  gp_timer_config_32(TIMER4_BASE,TIMER_TAMR_TAMR_PERIOD, 50000, false, true);	
-	 // enable leds on launch pad
-	 lp_io_init();
+	 // initial timers config
+//	gp_timer_config_32(TIMER1_BASE,TIMER_TAMR_TAMR_PERIOD, 50000000, false, true);
+//	gp_timer_config_32(TIMER2_BASE,TIMER_TAMR_TAMR_PERIOD, 1000000, false, true);
+//	gp_timer_config_32(TIMER3_BASE,TIMER_TAMR_TAMR_PERIOD, 500000, false, true);
+//  gp_timer_config_32(TIMER4_BASE,TIMER_TAMR_TAMR_PERIOD, 50000, false, true);	
+	 // test config timers
+	gp_timer_config_32(TIMER1_BASE,TIMER_TAMR_TAMR_PERIOD, 50000000, false, true);
+	gp_timer_config_32(TIMER2_BASE,TIMER_TAMR_TAMR_PERIOD, 900000, false, true);
+	gp_timer_config_32(TIMER3_BASE,TIMER_TAMR_TAMR_PERIOD, 400000, false, true);
+	gp_timer_config_16(TIMER4_BASE,TIMER_TAMR_TAMR_PERIOD, 40000, false, true);
 	 
+	 
+	 // enable leds on launch pad
+	 
+	 
+	 
+	 lp_io_init();
+	 eeprom_init();
 	 
 	return true;
 	 
