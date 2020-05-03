@@ -38,6 +38,9 @@ volatile uint16_t BALL_Y_COORD_2 = 180;
 volatile int trump_ball_cnt = 1;
 volatile int clinton_ball_cnt = 1;
 
+volatile int throw_counter = 0;
+volatile bool allowed_to_throw = true;
+
 
 volatile bool ALERT_INVADER = true;
 volatile bool BLINK_LED = false;
@@ -67,6 +70,55 @@ volatile uint16_t lives_clinton = 4;
 
 //*****************************************************************************
 //*****************************************************************************
+void welcomeScreen(uint32_t color){
+	
+	uint16_t trumpText_x;
+	uint16_t trumpText_y;
+	uint16_t clintonText_x;
+	uint16_t clintonText_y;
+	uint16_t dodgeballText_x;
+	uint16_t dodgeballText_y;
+	int i;
+	trumpText_x = 125;
+	trumpText_y = 51;
+	clintonText_x = 125;
+	clintonText_y = 285;
+	dodgeballText_x = 125;
+	dodgeballText_y = 204;
+
+	
+	lcd_draw_image(
+		trumpText_x,          // X Center Point
+		trumpTextTitleWidthPixels,       // Image Horizontal Width
+		trumpText_y,          // Y Center Point
+		trumpTextTitleHeightPixels,      // Image Vertical Height
+		trumpTextTitleBitmaps,           // Image
+		LCD_COLOR_RED,            // Foreground Color
+		LCD_COLOR_BLACK           // Background Color
+	);	
+		lcd_draw_image(
+		clintonText_x,          // X Center Point
+		clintonTextTitleWidthPixels,       // Image Horizontal Width
+		clintonText_y,          // Y Center Point
+		clintonTextTitleHeightPixels,      // Image Vertical Height
+		clintonTextTitleBitmaps,           // Image
+		LCD_COLOR_BLUE,            // Foreground Color
+		LCD_COLOR_BLACK           // Background Color
+	);	
+	lcd_draw_image(
+		dodgeballText_x,          // X Center Point
+		dodgeballTextTitleWidthPixels,       // Image Horizontal Width
+		dodgeballText_y,          // Y Center Point
+		dodgeballTextTitleHeightPixels,      // Image Vertical Height
+		dodgeballTextTitleBitmaps,           // Image
+		color,            // Foreground Color
+		LCD_COLOR_BLACK           // Background Color
+	);	
+	
+		
+}	
+
+
 // same as check game over in hw3
 // invader is the character and ship is the ball
 bool check_char(
@@ -305,13 +357,13 @@ void lives_led(){
 				}else if (hit && edge) { //ball was still moving and contacted character, decrement lives and set hit_trump_1 to true so ball will follow character
 					lives_trump = lives_trump - 1;
 					hit_trump_2 = true;
-					trump_ball_cnt = clinton_ball_cnt + 1;
+					trump_ball_cnt = trump_ball_cnt + 1;
 				
 				}else if(!edge){ //ball is on edge and character picked it up, do not decrement lives, set hit_trump_1 to true so ball will follow character
 					// miss and ball is on edge
 					if(hit){
 						hit_trump_2 = true;
-						trump_ball_cnt = clinton_ball_cnt + 1;
+						trump_ball_cnt = trump_ball_cnt + 1;
 					}
 					else{
 					    hit_trump_2 = false;
@@ -382,11 +434,11 @@ void move_image(
 		}
 		// check down
 		else if (direction == PS2_DIR_DOWN){
-					*y_coord = *y_coord + 1;
+					*y_coord = *y_coord ;
 		}
 		// check up
 		else if (direction == PS2_DIR_UP){
-					*y_coord = *y_coord - 1;
+					*y_coord = *y_coord ;
 		}
 		
 }
@@ -438,6 +490,50 @@ bool contact_edge(
 							return true;
 					}
 }
+void draw_num(uint8_t num){
+		const uint8_t *image;
+		FONT_CHAR_INFO* info;
+		uint8_t width;
+		uint8_t height;
+		uint16_t offset2;
+		int val = num;
+		char val2 = '0' + num;
+		int offset = val2 - constantia_16ptFontInfo.startChar;
+	
+	
+
+	
+	height = 26; //constantia_16ptFontInfo.heightPages*8;
+	width = constantia_16ptFontInfo.charInfo[offset].widthBits;
+	offset2 = constantia_16ptFontInfo.charInfo[offset].offset;
+	image = constantia_16ptBitmaps + offset2;
+	lcd_draw_image(
+													120,          // X Center Point
+                          highscoreWidthPixels,       // Image Horizontal Width
+                          40,          // Y Center Point
+													highscoreHeightPixels,      // Image Vertical Height
+                          highscoreBitmaps,           // Image
+                          LCD_COLOR_WHITE,            // Foreground Color
+                          LCD_COLOR_BLACK           // Background Color
+                        );
+	
+	
+	lcd_draw_image(
+													120,          // X Center Point
+                          width,       // Image Horizontal Width
+                          200,          // Y Center Point
+													height,      // Image Vertical Height
+                          image,           // Image
+                          LCD_COLOR_GREEN,            // Foreground Color
+                          LCD_COLOR_BLACK           // Background Color
+                        );
+	
+
+	
+
+
+
+}
 
 
 void DisableInterrupts(void)
@@ -465,21 +561,159 @@ main(void)
 		uint16_t x,y;
 		uint8_t touch_event;
 		bool start_game = false;
-		
+		int color = 0;
 	  bool clear_image_1 = true;
 	  bool clear_image_2 = true;
-	//uint16_t ball_r = 15;
-	//	bool hit_char = false;
+
+		int8_t s_ball_xOffset;
+		uint8_t s_ball_yOffset;
+		uint8_t s_x = 16;
+		uint8_t s_y = 110;
+		bool s_ball_xincreasing = true;
+		bool s_ball_yincreasing = true;
+	  int trump_x_pause = 0;
+	  int trump_y_pause = 0;
+	  int clinton_x_pause = 0;
+	  int clinton_y_pause = 0;
+	  int ball_1_x=0;
+	  int ball_1_y=0;
+	  int ball_2_x=0;
+		int ball_2_y=0;
+		bool end_game = false;
+		// winner: true for trump, false for clinton
+		bool winner;
+		// starting address for eeprom
+		uint16_t addr = 256;
+		// read value for eeprom
+		uint8_t read_val = 0;
+		const uint8_t *image;
 		
-		SHIP_X_COORD = 190;
-		SHIP_Y_COORD = 259;
+		SHIP_X_COORD = 60;
+		SHIP_Y_COORD = 319 - space_shipHeightPixels / 2 + 1;
+		INVADER_X_COORD = 60;
+		INVADER_Y_COORD = invaderHeightPixels / 2 + 1;
 		
 	//DisableInterrupts();
 	init_hardware();
 //EnableInterrupts();
-	
+			touch_event = ft6x06_read_td_status();
+			start_game = false;
+			s_ball_xOffset = 0;
+			s_ball_yOffset = 0;
+	// high score loop
+		
 
-    while(1){
+	// get current winner
+		touch_event = ft6x06_read_td_status();
+	eeprom_byte_read(I2C1_BASE,addr, &read_val);
+		if(read_val == 1){
+			// trump is current winner
+				lcd_draw_image(
+						130,          // X Center Point
+						trumpTextTitleWidthPixels,       // Image Horizontal Width
+						140,          // Y Center Point
+						trumpTextTitleHeightPixels,      // Image Vertical Height
+						trumpTextTitleBitmaps,           // Image
+						LCD_COLOR_RED,            // Foreground Color
+						LCD_COLOR_BLACK           // Background Color
+				);
+			// read the current win streak
+			addr = addr + 1;
+			eeprom_byte_read(I2C1_BASE,addr, &read_val);
+			// reset if greater than 9
+			if(read_val > 9){
+				eeprom_byte_write(I2C1_BASE, addr, 0);
+				draw_num(0);
+			}else{
+			draw_num(read_val);
+		}
+		}else{
+			// hillary is current winner
+					lcd_draw_image(
+							120,          // X Center Point
+							clintonTextTitleWidthPixels,       // Image Horizontal Width
+							150,          // Y Center Point
+							clintonTextTitleHeightPixels,      // Image Vertical Height
+							clintonTextTitleBitmaps,           // Image
+							LCD_COLOR_BLUE,            // Foreground Color
+							LCD_COLOR_BLACK           // Background Color
+					);
+			addr = addr + 1;
+			eeprom_byte_read(I2C1_BASE,addr, &read_val);
+			// reset if greater than 9
+			if(read_val > 9){
+				eeprom_byte_write(I2C1_BASE, addr, 0);
+				draw_num(0);
+			}else{
+			draw_num(read_val);
+			}
+		}
+while(!start_game){
+			touch_event = ft6x06_read_td_status();
+		if(touch_event > 0){
+						start_game = true;
+				}
+				
+	}
+			lcd_clear_screen(LCD_COLOR_BLACK);
+
+	// Home screen loop
+start_game = false;		
+		while(!start_game){
+			touch_event = ft6x06_read_td_status();
+			if(color == 0){
+					color++;
+					welcomeScreen(LCD_COLOR_BLUE);
+			}else if(color == 1){
+				color++;
+				welcomeScreen(LCD_COLOR_RED);
+			}else{
+				color = 0;
+				welcomeScreen(LCD_COLOR_WHITE);
+			}
+				
+									lcd_draw_image(
+													(s_x + s_ball_xOffset),          // X Center Point
+                          ballWidthPages,       // Image Horizontal Width
+                          (s_y + s_ball_yOffset),          // Y Center Point
+                          ballHeightPixels,      // Image Vertical Height
+                          ballBitmaps,           // Image
+                          LCD_COLOR_GREEN,            // Foreground Color
+                          LCD_COLOR_BLACK           // Background Color
+                        );
+					
+				if(s_ball_xincreasing){
+				s_ball_xOffset = s_ball_xOffset + 1;
+				}else{
+				s_ball_xOffset = s_ball_xOffset - 1;
+				}	
+				if(s_ball_yincreasing){ 
+					s_ball_yOffset = s_ball_yOffset + 1;
+				}else{
+					s_ball_yOffset = s_ball_yOffset - 1;
+				}	
+				// check to change directions
+				if(s_ball_yOffset > 20 ){
+					// toggle
+					s_ball_yincreasing = false;
+				}if(s_ball_yOffset == 0 ){
+					s_ball_yincreasing = true;
+				}if(s_ball_xincreasing && 
+						!contact_edge(PS2_DIR_RIGHT, (s_x + s_ball_xOffset), (s_y + s_ball_yOffset), ballHeightPixels, ballWidthPages)){
+					
+							s_ball_xincreasing = false;
+							
+				}if(!s_ball_xincreasing && s_ball_xOffset == 0){
+						s_ball_xincreasing = true;
+				}
+				
+				if(touch_event > 0){
+						start_game = true;
+				}
+				
+			}
+			lcd_clear_screen(LCD_COLOR_BLACK);
+    while(!end_game){
 //			while(!start_game){
 //				lcd_draw_image(
 //                          103,                       // X Center Point
@@ -493,8 +727,31 @@ main(void)
 //				
 //			}
 			
+			
+			if(pause_game){
+					  trump_x_pause = SHIP_X_COORD;
+					  trump_y_pause = SHIP_Y_COORD;
+					  clinton_x_pause = INVADER_X_COORD;
+					  clinton_y_pause = INVADER_Y_COORD;
+						ball_1_x=BALL_X_COORD_1;
+					  ball_1_y=BALL_Y_COORD_1;
+						ball_2_x=BALL_X_COORD_2;
+						ball_2_y=BALL_Y_COORD_2;
+			
+				
+				
+			}
+	
 			while(pause_game){
-				 // lcd_clear_screen(LCD_COLOR_BLACK);
+						 SHIP_X_COORD = trump_x_pause;
+					  SHIP_Y_COORD = trump_y_pause;
+					  INVADER_X_COORD = clinton_x_pause ;
+					  INVADER_Y_COORD = clinton_y_pause ;
+						BALL_X_COORD_1 = ball_1_x;
+					  BALL_Y_COORD_1 =  ball_1_y;
+						BALL_X_COORD_2 = ball_2_x;
+						BALL_Y_COORD_2 = ball_2_y;
+			
 		
 		}
 			touch_event = ft6x06_read_td_status();
@@ -620,38 +877,55 @@ main(void)
 			  BALL_Y_COORD_2 = SHIP_Y_COORD - (space_shipHeightPixels / 2) - (ballHeightPixels/2);
 			
 		}
-
+   // while(trump_ball_cnt == 2){};
 	
 		
-		
+		if(allowed_to_throw)
 		if((touch_event > 0)){  //
 				x = ft6x06_read_x();
 				y = ft6x06_read_y();
 			  if(ball_possesion_1 && (y<=160) && hit_trump_1){
-				  trump_ball_cnt = trump_ball_cnt - 1;
+				  if(trump_ball_cnt == 2){
+							allowed_to_throw = false;
+							throw_counter = 0;
+			    } 
+					trump_ball_cnt = trump_ball_cnt - 1;
 					hit_trump_1 = false;
-			
 					ball_possesion_1 = !ball_possesion_1;
 				}
 				else if(ball_possesion_2 && (y<=160) && hit_trump_2){                 
-				
+				  if(trump_ball_cnt == 2){
+							allowed_to_throw = false;
+							throw_counter = 0;
+			    } 
 					hit_trump_2 = false;
 					trump_ball_cnt = trump_ball_cnt - 1;
 					ball_possesion_2 = !ball_possesion_2;
 				}
 				if((!ball_possesion_1) &&  (y>=160) && hit_clinton_1){
-						
-							hit_clinton_1 = false;	
+						  if(clinton_ball_cnt == 2){
+								allowed_to_throw = false;
+								throw_counter = 0;
+						} 
+					    hit_clinton_1 = false;	
 					    clinton_ball_cnt = clinton_ball_cnt - 1;
 					    ball_possesion_1 = !ball_possesion_1;
 				}
 				else if((!ball_possesion_2) &&  (y>=160) && hit_clinton_2){              
-						
+						  if(clinton_ball_cnt == 2){
+								allowed_to_throw = false;
+								throw_counter = 0;
+			        } 
 							hit_clinton_2 = false;
 					    clinton_ball_cnt = clinton_ball_cnt - 1;
 					    ball_possesion_2 = !ball_possesion_2;
 				}
 		}	
+	  throw_counter = throw_counter + 1;
+		if(throw_counter == 25){
+				allowed_to_throw = true;
+		}
+		
 		
 		if(BLINK_LED){
 				BLINK_LED = false;
@@ -659,7 +933,107 @@ main(void)
 				GPIOF->DATA = GPIOF->DATA ^ BLUE_M;
 			}
 		lives_led();
+		// determine which character won
+		if(lives_trump == 0){
 			
-
+			winner = true;
+			end_game = true;
+		}			
+		if(lives_clinton == 0){
+			
+			winner = false;
+			end_game = true;
+		}
+		
+		}
+		read_val = 0;
+		addr = 256;
+		
+		// end game procedure
+		// test eepro
+		// start addr is 256
+		lcd_clear_screen(LCD_COLOR_BLACK);
+		if(winner){
+			// check if trump was the previous winner by reading
+			eeprom_byte_read(I2C1_BASE,addr, &read_val);
+			// first write 1 from trump winning;
+			eeprom_byte_write(I2C1_BASE, addr, 1);
+			// check if trump was the current winner by reading
+			if(read_val == 1){
+				addr++;
+				eeprom_byte_read(I2C1_BASE,addr, &read_val);
+				// increment read_val for win streak
+				read_val = read_val + 1;
+				// write current win streak
+				eeprom_byte_write(I2C1_BASE, addr, read_val);
+			}else{
+				addr++;
+				// clinton was the previous winner so write a 1 to second location location
+				eeprom_byte_write(I2C1_BASE, addr, 1);
+			}
+			eeprom_byte_read(I2C1_BASE,addr, &read_val);
+			printf("Trump wins! Current win streak: %u\n", read_val);
+				lcd_draw_image(
+						130,          // X Center Point
+						trumpTextTitleWidthPixels,       // Image Horizontal Width
+						140,          // Y Center Point
+						trumpTextTitleHeightPixels,      // Image Vertical Height
+						trumpTextTitleBitmaps,           // Image
+						LCD_COLOR_RED,            // Foreground Color
+						LCD_COLOR_BLACK           // Background Color
+				);
+				lcd_draw_image(
+						120,          // X Center Point
+						winsWidthPixels,       // Image Horizontal Width
+						220,          // Y Center Point
+						winsHeightPixels,      // Image Vertical Height
+						winsBitmaps,           // Image
+						LCD_COLOR_RED,            // Foreground Color
+						LCD_COLOR_BLACK           // Background Color
+				);			
+			
+		}else{
+		// clinton is winner
+		// check if trump was the previous winner by reading	
+			eeprom_byte_read(I2C1_BASE,addr, &read_val);
+			// first write 0 from clinton winning;
+			eeprom_byte_write(I2C1_BASE, addr, 0);
+			// check if clinton was the previous winner
+			if(read_val == 0){
+				addr++;
+				eeprom_byte_read(I2C1_BASE,addr, &read_val);
+				// increment read_val for win streak
+				read_val = read_val + 1;
+				// write current win streak
+				eeprom_byte_write(I2C1_BASE, addr, read_val);
+			}else{
+				addr++;
+				// trump was the previous winner so write a 1 to second location location
+				eeprom_byte_write(I2C1_BASE, addr, 1);
+			}
+			eeprom_byte_read(I2C1_BASE,addr, &read_val);
+			printf("Clinton wins! Current win streak: %u\n", read_val);
+			
+			
+			// draw end screen
+			lcd_draw_image(
+						120,          // X Center Point
+						winsWidthPixels,       // Image Horizontal Width
+						220,          // Y Center Point
+						winsHeightPixels,      // Image Vertical Height
+						winsBitmaps,           // Image
+						LCD_COLOR_BLUE,            // Foreground Color
+						LCD_COLOR_BLACK           // Background Color
+				);
+			lcd_draw_image(
+							120,          // X Center Point
+							clintonTextTitleWidthPixels,       // Image Horizontal Width
+							150,          // Y Center Point
+							clintonTextTitleHeightPixels,      // Image Vertical Height
+							clintonTextTitleBitmaps,           // Image
+							LCD_COLOR_BLUE,            // Foreground Color
+							LCD_COLOR_BLACK           // Background Color
+					);
+			
 		}
 		}
